@@ -1,6 +1,7 @@
 import { rollDice, getRandomBlock, getRandomItem } from '../utils/random.js';
 import { logRoll } from '../utils/logger.js';
 
+
 function tryTurbo(player) {
   if (Math.random() < 0.5) {
     console.log(`${player.NOME} ganhou TURBO ⚡ (+1 ponto)`);
@@ -13,7 +14,7 @@ export async function playRace(player1, player2) {
     console.log(`\n🏁 Rodada ${round}`);
 
     const block = getRandomBlock();
-    console.log(`Bloco: ${block}`);
+    console.log(`Modo: ${block}`);
 
     const dice1 = rollDice();
     const dice2 = rollDice();

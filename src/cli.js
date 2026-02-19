@@ -1,88 +1,158 @@
 import inquirer from 'inquirer';
 import { players } from './data/players.js';
 import { playRace, declareWinner } from './engine/raceEngine.js';
+import { playChampionship } from './engine/championship.js';
+import { getRanking, resetAllPoints } from './engine/ranking.js';
+import { showTitle, showPlayers, raceAnimation } from './ui/terminalUI.js';
 
-function resetPoints() {
-  players.forEach((p) => (p.PONTOS = 0));
+const MODES = ['Corrida 1x1', 'Campeonato', 'Ver Ranking', 'Sair'];
+
+function normalize(text) {
+  return text.trim().toLowerCase();
+}
+
+function showModes() {
+  console.log('\n🎮 Modos disponíveis:\n');
+
+  MODES.forEach((mode, index) => {
+    console.log(`  ${index + 1}. ${mode}`);
+  });
+
+  console.log('');
+}
+
+async function askMode() {
+  while (true) {
+    showModes();
+
+    const { modeInput } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'modeInput',
+        message: 'Escolha o modo (nome ou número):',
+      },
+    ]);
+
+    const value = normalize(modeInput);
+
+    // número
+    const index = Number(value);
+    if (!isNaN(index) && index >= 1 && index <= MODES.length) {
+      return MODES[index - 1];
+    }
+
+    // nome
+    const found = MODES.find((m) => normalize(m) === value);
+
+    if (found) return found;
+
+    console.log('❌ Modo inválido. Tente novamente.\n');
+  }
 }
 
 function findPlayerByName(name) {
   return players.find(
-    (p) => p.NOME.toLowerCase() === name.toLowerCase(),
+    (p) => p.NOME.toLowerCase() === name.trim().toLowerCase(),
   );
 }
 
-function playersListText() {
-  return players
-    .map(
-      (p) =>
-        `${p.NOME} (Vel:${p.VELOCIDADE} Man:${p.MANOBRABILIDADE} Pod:${p.PODER})`,
-    )
-    .join('\n');
+async function askPlayer(label, excluded = []) {
+  while (true) {
+    const { name } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'name',
+        message: `${label}:`,
+      },
+    ]);
+
+    const player = findPlayerByName(name);
+
+    if (!player) {
+      console.log(
+        `❌ Personagem inválido. Opções: ${players
+          .map((p) => p.NOME)
+          .join(', ')}\n`,
+      );
+      continue;
+    }
+
+    if (excluded.includes(player)) {
+      console.log('⚠️ Jogador já escolhido. Escolha outro.\n');
+      continue;
+    }
+
+    return player;
+  }
+}
+
+function showRanking(players) {
+  const ranking = getRanking(players);
+
+  console.log('\n📊 Ranking:\n');
+
+  ranking.forEach((p, index) => {
+    console.log(`${index + 1}º ${p.NOME} - ${p.PONTOS} pts`);
+  });
+
+  console.log('');
 }
 
 export async function startCLI() {
   let again = true;
 
   while (again) {
-    console.clear();
+    showTitle();
 
-    console.log('🏎️  Mario Kart Terminal\n');
+    const mode = await askMode();
 
-    console.log('Personagens disponíveis:\n');
-    console.log(playersListText());
-    console.log('');
+    switch (mode) {
+      case 'Corrida 1x1': {
+        showPlayers(players);
 
-    const { player1Name } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'player1Name',
-        message: 'Digite o nome do primeiro jogador:',
-        validate: (input) => {
-          if (findPlayerByName(input)) return true;
-          return 'Jogador não encontrado!';
-        },
-      },
-    ]);
+        const player1 = await askPlayer('Primeiro jogador');
+        const player2 = await askPlayer('Segundo jogador', [player1]);
 
-    const player1 = findPlayerByName(player1Name);
+        resetAllPoints(players);
 
-    const { player2Name } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'player2Name',
-        message: 'Digite o nome do segundo jogador:',
-        validate: (input) => {
-          const p = findPlayerByName(input);
+        await raceAnimation(`Corrida entre ${player1.NOME} e ${player2.NOME}`);
 
-          if (!p) return 'Jogador não encontrado!';
-          if (p === player1) return 'Escolha um jogador diferente!';
+        await playRace(player1, player2);
 
-          return true;
-        },
-      },
-    ]);
+        declareWinner(player1, player2);
+        break;
+      }
 
-    const player2 = findPlayerByName(player2Name);
+      case 'Campeonato': {
+        resetAllPoints(players);
 
-    resetPoints();
+        await raceAnimation('Iniciando campeonato');
 
-    console.log(
-      `\n🏁 Corrida entre ${player1.NOME} e ${player2.NOME} começando...\n`,
-    );
+        await playChampionship(players);
 
-    await playRace(player1, player2);
+        console.log('\n🏆 Ranking Final:');
+        showRanking(players);
+        break;
+      }
 
-    declareWinner(player1, player2);
+      case 'Ver Ranking': {
+        showRanking(players);
+        break;
+      }
 
-    const answer = await inquirer.prompt([
+      case 'Sair': {
+        process.exit();
+      }
+    }
+
+    const { again: answer } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'again',
-        message: 'Deseja jogar novamente?',
+        message: 'Voltar ao menu?',
       },
     ]);
 
-    again = answer.again;
+    again = answer;
   }
 }

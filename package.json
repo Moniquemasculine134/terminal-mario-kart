@@ -1,16 +1,24 @@
 {
   "name": "sim-mario-kart",
   "version": "1.0.0",
-  "description": "",
+  "description": "Mario Kart simulation in terminal using Node.js",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "keywords": [
+    "node",
+    "cli",
+    "game",
+    "mario-kart",
+    "simulation"
+  ],
+  "author": "Victor Hugo",
+  "license": "MIT",
   "dependencies": {
-    "inquirer": "^13.2.5"
+    "chalk": "^5.6.2",
+    "inquirer": "^13.2.5",
+    "ora": "^9.3.0"
   }
 }
